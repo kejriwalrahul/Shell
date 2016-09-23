@@ -3,7 +3,9 @@
 #include <stdlib.h>
 
 #include <unistd.h>
+#include <wait.h>
 #include <limits.h>
+#include <errno.h>
 
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -89,6 +91,7 @@ struct command parseCommand(char *s){
 	cmd.cmd = args[0];
 	cmd.args = args;
 
+	// printf("Args:\n");
 	// printargs(args, k);
 
 	return cmd;
@@ -105,19 +108,26 @@ void printPrompt(){
 		getlogin_r(username, LOGIN_NAME_MAX);
 		run = 1;
 	}
-	printf("%s@%s :: %s$$ ", username, hostname, getcwd(cwd, sizeof(cwd)));
+	// printf("%s@%s:~%s$ ", username, hostname, getcwd(cwd, sizeof(cwd)));
+	printf("%s$ ", getcwd(cwd, sizeof(cwd)));
 }
 
-void executeCommand(){
-
+// Actually invoke the child
+void executeCommand(struct command c){
+	int err = execvp(c.cmd, c.args);
+	if(err == -1){
+		printf("%s %s\n", "Failed to execute:", c.cmd);
+		printf("%s %s\n", "Error:", strerror(errno));
+		exit(0);
+	}
 }
 
-int isBackgrounfJob(){
+int isBackgrounfJob(struct command c){
+	int i;
+	for(i=0;c.args[i]!=NULL;i++);
+	if(!strcmp(c.args[i-1],"&"))
+		return 1;
 	return 0;
-}
-
-void waitpid(){
-
 }
 
 int main(int argc, char **argv){
@@ -125,11 +135,13 @@ int main(int argc, char **argv){
 		int childPid;
 		char* cmdLine;
 		struct command cmd;
+		int stat;
 
 		printPrompt();
 
 		// cmdLine = readCommandLine();
 		cmdLine = readline("");
+		add_history (cmdLine);
 
 		cmd = parseCommand(cmdLine);
 
@@ -146,7 +158,7 @@ int main(int argc, char **argv){
 					// Record in lsb
 				}
 				else{
-					waitpid(childPid);
+					waitpid(childPid, &stat, 0);
 				}
 			}
 		}
