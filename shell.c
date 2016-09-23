@@ -33,6 +33,9 @@ int iswspace(char c){
 }
 
 int isBuildCommand(struct command c){
+	if(c.cmd == NULL)
+		return 0;
+
 	int i = 0;
 	for(;i<builtInCmdSize;i++)
 		if(!strcmp(c.cmd, builtInCmds[i]))
@@ -114,6 +117,9 @@ void printPrompt(){
 
 // Actually invoke the child
 void executeCommand(struct command c){
+	if(!strcmp(c.cmd, ""))
+		exit(0);
+
 	int err = execvp(c.cmd, c.args);
 	if(err == -1){
 		printf("%s %s\n", "Failed to execute:", c.cmd);
@@ -123,6 +129,9 @@ void executeCommand(struct command c){
 }
 
 int isBackgrounfJob(struct command c){
+	if(c.cmd == NULL)
+		return 0;
+
 	int i;
 	for(i=0;c.args[i]!=NULL;i++);
 	if(!strcmp(c.args[i-1],"&"))
