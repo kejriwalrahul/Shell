@@ -22,7 +22,7 @@ struct command{
 	struct command *next;
 };
 
-int iswspace(char c){
+int iswhspace(char c){
 	switch(c){
 		case ' ' :
 		case '\t':
@@ -86,7 +86,7 @@ struct command* parseCommand(char *s){
 	
 	int i;
 	for(i=0;s[i]!='\0';i++){
-		if(iswspace(s[i]))
+		if(iswhspace(s[i]))
 			continue;
 
 		// if command is terminated
@@ -106,7 +106,7 @@ struct command* parseCommand(char *s){
 
 		// if current token is finished, add to token list
 		// and reinit buff
-		if(iswspace(s[i+1]) || s[i+1]==';'){
+		if(iswhspace(s[i+1]) || s[i+1]==';'){
 			buff[b] = '\0';
 			curr->args[k] = malloc(strlen(buff));
 			strcpy(curr->args[k], buff);
