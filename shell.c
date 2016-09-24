@@ -18,15 +18,6 @@ const int size = 512;
 char *builtInCmds[] = {"exit", "pwd"};
 int builtInCmdSize = 2;
 
-// struct to encode each separate command
-struct command{
-	char *cmd;				//String defining prog name
-	char **args;			//Array of strings where 0th element is prog name 
-							//and subsequent elements are tokens typed after prog name including |, <> and &
-	char separator; 		// contains ';' if command was terminated by ;
-	struct command *next;	//Points to next command if multiple commands were typed on same line separated by ';'
-};
-
 // Define characters that delimit words in input 
 int iswhspace(char c){
 	switch(c){
@@ -187,10 +178,15 @@ void printPrompt(){
 }
 
 // Actually invoke the child
-void executeCommand(struct command c){
+void executeCommand(struct command c, int *sharedPipe){
 	// If empty command, terminate child
 	if(!strcmp(c.cmd, ""))
 		exit(0);
+
+	// int i;
+	// for(i=0;c.args[i]!=NULL;i++) {
+	// 	if ()
+	// }
 
 	// Execute command on child, store return val in case of failure
 	int err = execvp(c.cmd, c.args);
@@ -248,11 +244,22 @@ int main(int argc, char **argv){
 			// If external prog
 			else{
 				// Fork a child
+				int sharedPipe[2];
+
 				childPid = fork();
 				// In child
 				if(childPid == 0){
+					int i=0;
+					for(i=0;cmd->args[i]!=NULL;i++) {
+						if (strcmp("<",cmd->args[i]) == 0)
+							redirect(IN, cmd->args[i+1]);
+						else if (strcmp(">",cmd->args[i]) == 0)
+							redirect(OUT, cmd->args[i+1]);
+						else if (strcmp("|",cmd->args[i]) == 0);
+						else if (strcmp("&",cmd->args[i]) == 0);
+					}
 					// Execute program
-					executeCommand(*cmd);
+					executeCommand(*cmd, sharedPipe);
 				}
 				// In Parent
 				else{
