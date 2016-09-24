@@ -12,13 +12,15 @@
 
 const int size = 512;
 
+char *builtInCmds[] = {"exit", "pwd"};
+int builtInCmdSize = 2;
+
 struct command{
 	char *cmd;
 	char **args;
+	char separator;
+	struct command *next;
 };
-
-char *builtInCmds[] = {"exit", "pwd"};
-int builtInCmdSize = 2;
 
 int iswspace(char c){
 	switch(c){
@@ -56,15 +58,25 @@ void executeBuiltInCommand(struct command c){
 
 }
 
+void printargs2(char **s){
+	int i;
+	for(i=0; s[i] ;++i)
+		printf("%s\n", s[i]);
+}
+
 void printargs(char **s, int size){
 	int i;
 	for(i=0; i < size ;++i)
 		printf("%s\n", s[i]);
 }
 
-struct command parseCommand(char *s){
+struct command* parseCommand(char *s){
+	struct command *par  = malloc(sizeof(struct command)); 
+	struct command *curr = par;
+	curr->next = NULL;
+
 	// Array of args
-	char **args = malloc(sizeof(char*)*size);
+	curr->args = malloc(size*sizeof(char*));
 	// Index of next free arg
 	int k = 0;
 
@@ -74,30 +86,41 @@ struct command parseCommand(char *s){
 	
 	int i;
 	for(i=0;s[i]!='\0';i++){
-		if(iswspace(s[i])){
+		if(iswspace(s[i]))
+			continue;
+
+		// if command is terminated
+		if(s[i] == ';'){
+			curr->cmd		= curr->args[0];
+			curr->separator = ';';
+			curr->next 		= malloc(sizeof(struct command));
+			curr 			= curr->next;
+			curr->args 		= malloc(size*sizeof(char*));
+			k = 0;
+			curr->next 		= NULL;
 			continue;
 		}
-		else{
-			buff[b++] = s[i];
-			if(iswspace(s[i+1])){
-				buff[b] = '\0';
-				args[k] = malloc(strlen(buff));
-				strcpy(args[k], buff);
-				k++;
-				strcpy(buff, "");
-				b = 0;
-			}
+
+		// append char to buffer
+		buff[b++] = s[i];
+
+		// if current token is finished, add to token list
+		// and reinit buff
+		if(iswspace(s[i+1]) || s[i+1]==';'){
+			buff[b] = '\0';
+			curr->args[k] = malloc(strlen(buff));
+			strcpy(curr->args[k], buff);
+			k++;
+			strcpy(buff, "");
+			b = 0;
 		}
 	}
-	
-	struct command cmd;
-	cmd.cmd = args[0];
-	cmd.args = args;
 
+	curr->cmd = curr->args[0];
 	// printf("Args:\n");
 	// printargs(args, k);
 
-	return cmd;
+	return par;
 }
 
 void printPrompt(){
@@ -119,6 +142,8 @@ void printPrompt(){
 void executeCommand(struct command c){
 	if(!strcmp(c.cmd, ""))
 		exit(0);
+
+	// printargs2(c.args);	
 
 	int err = execvp(c.cmd, c.args);
 	if(err == -1){
@@ -142,34 +167,36 @@ int isBackgrounfJob(struct command c){
 int main(int argc, char **argv){
 	while(1){
 		int childPid;
-		char* cmdLine;
-		struct command cmd;
+		char *cmdLine;
+		struct command *cmd;
 		int stat;
 
 		printPrompt();
 
-		// cmdLine = readCommandLine();
 		cmdLine = readline("");
 		add_history (cmdLine);
 
 		cmd = parseCommand(cmdLine);
 
-		if(isBuildCommand(cmd)){
-			executeBuiltInCommand(cmd);
-		}
-		else{
-			childPid = fork();
-			if(childPid == 0){
-				executeCommand(cmd);
+		while(cmd){
+			if(isBuildCommand(*cmd)){
+				executeBuiltInCommand(*cmd);
 			}
 			else{
-				if(isBackgrounfJob(cmd)){
-					// Record in lsb
+				childPid = fork();
+				if(childPid == 0){
+					executeCommand(*cmd);
 				}
 				else{
-					waitpid(childPid, &stat, 0);
+					if(isBackgrounfJob(*cmd)){
+						// Record in lsb
+					}
+					else{
+						waitpid(childPid, &stat, 0);
+					}
 				}
 			}
+			cmd = cmd->next;
 		}
 	}
 }
