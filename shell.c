@@ -9,6 +9,7 @@
 
 #include <readline/readline.h>
 #include <readline/history.h>
+#include "header.h"
 
 const int size = 512;
 
