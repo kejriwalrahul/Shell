@@ -61,7 +61,6 @@ void executeBuiltInCommand(struct command c){
 		case 1: printf("%s\n", getcwd(cwd, sizeof(cwd)));
 				break;
 	}
-
 }
 
 // Print tokens in command
@@ -80,7 +79,7 @@ void printargs(char **s, int size){
 		printf("%s\n", s[i]);
 }
 
-// Command parser
+// Command parser - tokenizer
 struct command* parseCommand(char *s){
 	// 'par'  holds head of command linked list, i.e., it contains the first command in list of commands
 	struct command *par  = malloc(sizeof(struct command)); 
@@ -105,6 +104,17 @@ struct command* parseCommand(char *s){
 		// ignore whitespace
 		if(iswhspace(s[i]))
 			continue;
+
+		if(s[i]=='|' || s[i]=='&' || s[i] =='<' || s[i] =='>'){
+			buff[b]   = s[i];
+			buff[b+1] = '\0';
+			curr->args[k] = malloc(strlen(buff));
+			strcpy(curr->args[k], buff);
+			k++;
+			strcpy(buff, "");
+			b = 0;
+			continue;
+		}
 
 		// if current command is terminated
 		if(s[i] == ';'){
@@ -131,7 +141,8 @@ struct command* parseCommand(char *s){
 
 		// if current token is finished, add to token list
 		// and reinit buff
-		if(iswhspace(s[i+1]) || s[i+1]==';'){
+		int term = (s[i+1]=='|' || s[i+1]=='&' || s[i+1] =='<' || s[i+1] =='>') && strcmp(buff,"");
+		if(iswhspace(s[i+1]) || s[i+1]==';' || term){
 			// terminate current token with '\0'
 			buff[b] = '\0';
 			// allocate memory for string in args element
@@ -177,16 +188,23 @@ void printPrompt(){
 	printf("%s$ ", getcwd(cwd, sizeof(cwd)));
 }
 
+void handleSugar(struct command *cmd){
+	int i=0;
+	for(i=0; cmd->args[i] != NULL ;i++){
+		if      (!strcmp("<", cmd->args[i]))	{	cmd->args[i] = NULL; redirect(IN, cmd->args[i+1]);	}
+		else if (!strcmp(">", cmd->args[i]))    {	cmd->args[i] = NULL; redirect(OUT, cmd->args[i+1]);	}
+		else if (!strcmp("|", cmd->args[i]))	;
+		else if (!strcmp("&", cmd->args[i]))	{ 	cmd->args[i] = NULL; redirect(OUT, "out");			}
+	}
+}
+
 // Actually invoke the child
-void executeCommand(struct command c, int *sharedPipe){
+void executeCommand(struct command c){
 	// If empty command, terminate child
+	handleSugar(&c);
+
 	if(!strcmp(c.cmd, ""))
 		exit(0);
-
-	// int i;
-	// for(i=0;c.args[i]!=NULL;i++) {
-	// 	if ()
-	// }
 
 	// Execute command on child, store return val in case of failure
 	int err = execvp(c.cmd, c.args);
@@ -244,22 +262,11 @@ int main(int argc, char **argv){
 			// If external prog
 			else{
 				// Fork a child
-				int sharedPipe[2];
-
 				childPid = fork();
 				// In child
 				if(childPid == 0){
-					int i=0;
-					for(i=0;cmd->args[i]!=NULL;i++) {
-						if (strcmp("<",cmd->args[i]) == 0)
-							redirect(IN, cmd->args[i+1]);
-						else if (strcmp(">",cmd->args[i]) == 0)
-							redirect(OUT, cmd->args[i+1]);
-						else if (strcmp("|",cmd->args[i]) == 0);
-						else if (strcmp("&",cmd->args[i]) == 0);
-					}
 					// Execute program
-					executeCommand(*cmd, sharedPipe);
+					executeCommand(*cmd);
 				}
 				// In Parent
 				else{

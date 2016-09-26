@@ -3,31 +3,28 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 
-void redirect(REDIR_TYPE type, char *name)
-{
-	if (name == NULL) {
-		puts("file does not exist");
-		exit(0);
-	}
-	uint fd = -1;
-	switch(type) {
-		case IN:
-			close(IN);
-			fd = open(name, O_RDONLY);
-			break;
-		case OUT:
-			close(OUT);
-			fd = open(name, O_WRONLY);
-			break;
-	}
-	if (fd == -1) {
-		puts("error in opening file");
-		exit(0);
-	}
+void error(char *s){
+	printf("%s %s\n", "Error:", strerror(errno));
+	printf("Error: %s\n", s);
+	exit(0);	
 }
 
-void pipline(char* fout, char* fin, int pid)
-{
-	int p[2];
+void redirect(REDIR_TYPE type, char *name)
+{	
+	uint fd = -1;
+
+	switch(type){
+		case IN:  fd = open(name, O_RDONLY);
+				  if (fd < 0)			 error("File Open Error");
+				  if(dup2(fd,IN) < 0)    error("Unable to redirect input");
+				  break;
+		case OUT: fd = open(name, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU);
+				  if (fd < 0)			 error("File Open Error");
+				  if(dup2(fd,OUT) < 0)   error("Unable to redirect output");
+				  break;
+		default:  error("Invalid redirect call");
+	}
 }

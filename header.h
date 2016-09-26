@@ -1,9 +1,10 @@
 #ifndef HEADER_H
 #define HEADER_H
+
 typedef enum {
 	IN,
 	OUT
-}REDIR_TYPE;
+} REDIR_TYPE;
 
 // struct to encode each separate command
 struct command{
@@ -15,4 +16,5 @@ struct command{
 };
 
 void redirect(REDIR_TYPE, char *);
+
 #endif
