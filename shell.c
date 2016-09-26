@@ -11,12 +11,19 @@
 #include <readline/history.h>
 #include "header.h"
 
+#define max_bg_num 100
+
 // Constant defininng max length of command typed on console
 const int size = 512;
 
 // Defining list of inbuilt commands that shell executes (not via child process)
-char *builtInCmds[] = {"exit", "pwd"};
-int builtInCmdSize = 2;
+char *builtInCmds[] = {"exit", "pwd", "lsb"};
+int builtInCmdSize = 3;
+
+// Support maximum of 100 bg_processes
+int bg_process[max_bg_num];
+struct command *bg_commands[max_bg_num];
+int next_bg = 1;
 
 // Define characters that delimit words in input 
 int iswhspace(char c){
@@ -29,6 +36,18 @@ int iswhspace(char c){
 
 		default: return 0;
 	}
+}
+
+void list_bg(){
+	int i, status;
+	for(i=0;i<max_bg_num; i++)
+		if(bg_process[i] != 0)
+			if(waitpid(bg_process[i], &status, WNOHANG) == 0)
+				printf("Process PID: %d Command %s\n", bg_process[i], bg_commands[i]->cmd);
+			else{
+				bg_process[i]  = 0;
+				bg_commands[i] = NULL;
+			}
 }
 
 // Function to check if given command is inbuilt into shell or not
@@ -59,6 +78,8 @@ void executeBuiltInCommand(struct command c){
 	switch(index){
 		case 0: exit(0);
 		case 1: printf("%s\n", getcwd(cwd, sizeof(cwd)));
+				break;
+		case 2: list_bg();
 				break;
 	}
 }
@@ -273,7 +294,9 @@ int main(int argc, char **argv){
 					// Check if background process
 					if(isBackgrounfJob(*cmd)){
 						// Record in lsb
-						// Handle background processes here <<<<<<<<<<<<<<<<<< IMPLEMENT
+						bg_process[next_bg-1]  = childPid;
+						bg_commands[next_bg-1] = cmd;
+						next_bg++;
 					}
 					// If not background process, wait for child to terminate
 					else{
