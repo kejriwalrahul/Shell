@@ -188,7 +188,7 @@ struct command* parseCommand(char *s){
 }
 
 // Prints prompt on console
-void printPrompt(){
+char* printPrompt(){
 	static char hostname[HOST_NAME_MAX];
 	static char username[LOGIN_NAME_MAX];
 	static int run = 0;
@@ -206,7 +206,8 @@ void printPrompt(){
 	// printf("%s@%s:~%s$ ", username, hostname, getcwd(cwd, sizeof(cwd)));
 	
 	// Test prompt: (to distinguish between real shell and our shell)
-	printf("%s$ ", getcwd(cwd, sizeof(cwd)));
+	// ("%s$ ", )
+	return strcat(getcwd(cwd, sizeof(cwd)),"$");
 }
 
 void handleSugar(struct command *cmd){
@@ -263,11 +264,12 @@ int main(int argc, char **argv){
 		struct command *cmd;
 		int stat;
 
+		char *prompt;
 		// prints prompt
-		printPrompt();
+		prompt = printPrompt();
 
 		// reads input line
-		cmdLine = readline("");
+		cmdLine = readline(prompt);
 		// Stores it in history
 		add_history (cmdLine);
 
