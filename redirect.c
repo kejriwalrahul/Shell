@@ -6,12 +6,14 @@
 #include <string.h>
 #include <errno.h>
 
+// Print IO redirection/Piping errors
 void error(char *s){
 	printf("%s %s\n", "Error:", strerror(errno));
 	printf("Error: %s\n", s);
-	exit(0);	
+	exit(0);
 }
 
+// Redirection Support
 void redirect(REDIR_TYPE type, char *name)
 {	
 	uint fd = -1;

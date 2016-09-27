@@ -16,5 +16,6 @@ struct command{
 };
 
 void redirect(REDIR_TYPE, char *);
+void error(char *s);
 
 #endif

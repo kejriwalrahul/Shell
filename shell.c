@@ -25,6 +25,10 @@ int bg_process[max_bg_num];
 struct command *bg_commands[max_bg_num];
 int next_bg = 1;
 
+// Pipe fds
+int fd[2];
+int fd_in;
+
 // Define characters that delimit words in input 
 int iswhspace(char c){
 	switch(c){
@@ -107,6 +111,16 @@ void printargs(char **s, int size){
 		printf("%s\n", s[i]);
 }
 
+// recycle memory
+void free_mem(struct command *c){
+	int i;
+	for(i=0; c->args[i] ;++i)
+		free(c->args[i]);
+
+	// free(c->args);
+	free(c);
+}
+
 // Command parser - tokenizer
 struct command* parseCommand(char *s){
 	// 'par'  holds head of command linked list, i.e., it contains the first command in list of commands
@@ -130,9 +144,9 @@ struct command* parseCommand(char *s){
 		if(iswhspace(s[i]))			continue;
 
 		// if current command is terminated
-		if(s[i] == ';'){
+		if(s[i] == ';' || s[i] == '|'){
 			curr->cmd	= curr->args[0];	// store prog name in corresponding field
-			curr->separator = ';';			// store separator
+			curr->separator = s[i];			// store separator
 			curr->next	= malloc(sizeof(struct command));	// init new node in linked list
 			curr 		= curr->next;		// move to new node
 			curr->args	= malloc(size*sizeof(char*));		// initialize args token list
@@ -142,7 +156,7 @@ struct command* parseCommand(char *s){
 		}
 
 		// If special character
-		if(s[i]=='|' || s[i]=='&' || s[i] =='<' || s[i] =='>'){
+		if(s[i]=='&' || s[i] =='<' || s[i] =='>'){
 			buff[b]   = s[i];
 			buff[b+1] = '\0';
 			curr->args[k] = malloc(strlen(buff));
@@ -238,6 +252,14 @@ void executeCommand(struct command c){
 	// If empty command, terminate child
 	handleSugar(&c);
 
+	if(fd_in != -1){
+		if(dup2(fd_in, IN) < 0)    	error("Unable to pipe in input");
+	}
+
+	if(fd[1] != -1){
+		if(dup2(fd[1], OUT) < 0)    error("Unable to pipe out output");
+	}
+
 	if(!strcmp(c.cmd, ""))
 		exit(0);
 
@@ -271,6 +293,12 @@ int isBackgrounfJob(struct command c){
 
 // Do infinitely
 int main(int argc, char **argv){
+	printf("\nWelcome to Simple Shell!\n\n");
+	rl_bind_key ('\t', rl_insert);
+	
+	// Initialize fds
+	fd[0] = fd[1] = -1;
+
 	while(1){
 		int childPid;
 		char *cmdLine;
@@ -278,16 +306,12 @@ int main(int argc, char **argv){
 		int stat;
 
 		char *prompt;
-		// prints prompt
-		prompt = printPrompt();
+		prompt = printPrompt();			// prints prompt
+		
+		cmdLine = readline(prompt);		// reads input line
+		add_history (cmdLine);			// Stores it in history
 
-		// reads input line
-		cmdLine = readline(prompt);
-		// Stores it in history
-		add_history (cmdLine);
-
-		// parses given input
-		cmd = parseCommand(cmdLine);
+		cmd = parseCommand(cmdLine);	// parses given input
 
 		// while commands exists in given ip
 		while(cmd){
@@ -297,30 +321,39 @@ int main(int argc, char **argv){
 			}
 			// If external prog
 			else{
-				// Fork a child
-				childPid = fork();
-				// In child
-				if(childPid == 0){
-					// Execute program
-					executeCommand(*cmd);
+				// printargs2(cmd->args);
+				// Propagate older pipes
+				if(fd_in != IN && fd_in != OUT)
+					close(fd_in);
+
+				fd_in = fd[0];
+				fd[0] = fd[1] = -1;
+				// Establish pipe if command needs it before forking
+				if(cmd->separator == '|')
+					pipe(fd);
+
+				childPid = fork();			// Fork a child
+				if(childPid == 0){			// In child
+					executeCommand(*cmd);	// Execute program
 				}
-				// In Parent
-				else{
-					// Check if background process
-					if(isBackgrounfJob(*cmd)){
-						// Record in lsb
-						bg_process[next_bg-1]  = childPid;
+				else{											// In Parent
+					if(isBackgrounfJob(*cmd)){					// Check if background process
+						bg_process[next_bg-1]  = childPid;		// Record in lsb
 						bg_commands[next_bg-1] = cmd;
 						next_bg++;
 					}
 					// If not background process, wait for child to terminate
 					else{
+						if(fd[1]!=-1)
+							close(fd[1]);
 						waitpid(childPid, &stat, 0);
 					}
 				}
 			}
+			struct command *tmp = cmd;
 			// Move to next command in command linked list
 			cmd = cmd->next;
+			free_mem(tmp);
 		}
 	}
 }
