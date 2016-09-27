@@ -17,8 +17,8 @@
 const int size = 512;
 
 // Defining list of inbuilt commands that shell executes (not via child process)
-char *builtInCmds[] = {"exit", "pwd", "lsb"};
-int builtInCmdSize = 3;
+char *builtInCmds[] = {"exit", "pwd", "lsb", "cd"};
+int builtInCmdSize = 4;
 
 // Support maximum of 100 bg_processes
 int bg_process[max_bg_num];
@@ -91,6 +91,8 @@ void executeBuiltInCommand(struct command c){
 		case 1: printf("%s\n", getcwd(cwd, sizeof(cwd)));
 				break;
 		case 2: list_bg();
+				break;
+		case 3: chdir(c.args[1]);
 				break;
 	}
 }
@@ -295,7 +297,7 @@ int isBackgrounfJob(struct command c){
 int main(int argc, char **argv){
 	printf("\nWelcome to Simple Shell!\n\n");
 	rl_bind_key ('\t', rl_insert);
-	
+
 	// Initialize fds
 	fd[0] = fd[1] = -1;
 
