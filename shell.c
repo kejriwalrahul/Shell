@@ -38,6 +38,13 @@ int iswhspace(char c){
 	}
 }
 
+// Prints error msg
+void* error2(char *s){
+	printf("Error: %s\n", s);
+	return NULL;	
+}
+
+// Prints running background process list
 void list_bg(){
 	int i, status;
 	for(i=0;i<max_bg_num; i++)
@@ -104,16 +111,13 @@ void printargs(char **s, int size){
 struct command* parseCommand(char *s){
 	// 'par'  holds head of command linked list, i.e., it contains the first command in list of commands
 	struct command *par  = malloc(sizeof(struct command)); 
-	// 'curr' refers to current element in linked list of commands
-	struct command *curr = par;
-	// Initialize next with NULL
-	curr->next = NULL;
+	struct command *curr = par;		// 'curr' refers to current element in linked list of commands
+	curr->next = NULL;				// Initialize next with NULL
 
 	// Array of args
 	// Allocate memory for pointer to sufficient no of tokens
 	curr->args = malloc(size*sizeof(char*));
-	// Index of next free arg
-	int k = 0;
+	int k = 0;		// Index of next free arg
 
 	// Index of next free char in buff
 	int b = 0;
@@ -123,9 +127,21 @@ struct command* parseCommand(char *s){
 	int i;
 	for(i=0;s[i]!='\0';i++){
 		// ignore whitespace
-		if(iswhspace(s[i]))
-			continue;
+		if(iswhspace(s[i]))			continue;
 
+		// if current command is terminated
+		if(s[i] == ';'){
+			curr->cmd	= curr->args[0];	// store prog name in corresponding field
+			curr->separator = ';';			// store separator
+			curr->next	= malloc(sizeof(struct command));	// init new node in linked list
+			curr 		= curr->next;		// move to new node
+			curr->args	= malloc(size*sizeof(char*));		// initialize args token list
+			k = 0;							// reset args index counter
+			curr->next 	= NULL;				// init next element to NUll
+			continue;						// move on to next char in input
+		}
+
+		// If special character
 		if(s[i]=='|' || s[i]=='&' || s[i] =='<' || s[i] =='>'){
 			buff[b]   = s[i];
 			buff[b+1] = '\0';
@@ -137,45 +153,35 @@ struct command* parseCommand(char *s){
 			continue;
 		}
 
-		// if current command is terminated
-		if(s[i] == ';'){
-			// store prog name in corresponding field
-			curr->cmd		= curr->args[0];
-			// store separator
-			curr->separator = ';';
-			// init new node in linked list
-			curr->next 		= malloc(sizeof(struct command));
-			// move to new node
-			curr 			= curr->next;
-			// initialize args token list
-			curr->args 		= malloc(size*sizeof(char*));
-			// reset args index counter
-			k = 0;
-			// init next element to NUll
-			curr->next 		= NULL;
-			// move on to next char in input
+		// Accepting quoted tokens
+		if(s[i] == '\"'){
+			i++;
+			while((s[i] != '\"' || s[i-1] == '\\') && s[i] != '\0'){	
+				if(s[i] == '\"' && s[i-1] == '\\') b--;
+				buff[b++] = s[i++];
+			}
+
+			if(s[i] == '\0')	return error2("Incomplete input");
+			buff[b] = '\0';							// terminate current token with '\0'
+			curr->args[k] = malloc(strlen(buff)+1);	// allocate memory for string in args element
+			strcpy(curr->args[k], buff);			// copy token string
+			k++; 									// increment index counter
+			strcpy(buff, "");						// reset buffer
+			b = 0;				
 			continue;
 		}
 
-		// append char to buffer
-		buff[b++] = s[i];
-
-		// if current token is finished, add to token list
-		// and reinit buff
-		int term = (s[i+1]=='|' || s[i+1]=='&' || s[i+1] =='<' || s[i+1] =='>') && strcmp(buff,"");
-		if(iswhspace(s[i+1]) || s[i+1]==';' || term){
-			// terminate current token with '\0'
-			buff[b] = '\0';
-			// allocate memory for string in args element
-			curr->args[k] = malloc(strlen(buff));
-			// copy token string
-			strcpy(curr->args[k], buff);
-			// increment index counter
-			k++;
-			// reset buffer
-			strcpy(buff, "");
-			b = 0;
+		// while non-sig char append char to buffer
+		while(s[i]!='|' && s[i]!='&' && s[i] !='<' && s[i] !='>' && s[i]!=';' && s[i]!='\"' && !iswhspace(s[i]) && s[i] != '\0'){
+			buff[b++] = s[i++];
 		}
+
+		buff[b] = '\0';							// terminate current token with '\0'
+		curr->args[k] = malloc(strlen(buff)+1);	// allocate memory for string in args element
+		strcpy(curr->args[k], buff);			// copy token string
+		k++; i--;								// increment index counter
+		strcpy(buff, "");						// reset buffer
+		b = 0;
 	}
 
 	// store prog name in corresponding field
@@ -202,11 +208,18 @@ char* printPrompt(){
 		getlogin_r(username, LOGIN_NAME_MAX);
 		run = 1;
 	}
-	// Deploy prompt:
-	// printf("%s@%s:~%s$ ", username, hostname, getcwd(cwd, sizeof(cwd)));
 	
+	// Deploy prompt:
+	static char p[1000];
+	strcpy(p,""); 
+	strcat(p, username);
+	strcat(p,"@");
+	strcat(p, hostname);
+	strcat(p, ":");
+	strcat(p, getcwd(cwd, sizeof(cwd)));
+	return strcat(p, "$ ");
+
 	// Test prompt: (to distinguish between real shell and our shell)
-	// ("%s$ ", )
 	return strcat(getcwd(cwd, sizeof(cwd)),"$");
 }
 
