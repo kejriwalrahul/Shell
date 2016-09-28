@@ -6,5 +6,5 @@ Supports ';' separated commands, redirection, piping and background processes.
 
 ### Bugs: 
 
-1. TabCompletion causing problems. Disabled for now.
-2. Unstable
+1. TabCompletion caused problems earlier. Enabled for now. Please report if bugs found.
+2. Was Unstable. Please report problems.

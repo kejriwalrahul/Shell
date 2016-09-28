@@ -289,7 +289,7 @@ int main(int argc, char **argv){
 	printf("\nWelcome to Simple Shell!\n\n");
 	
 	// Disable Tab Completion
-	rl_bind_key ('\t', rl_insert);
+	// rl_bind_key ('\t', rl_insert);
 
 	// Initialize fds
 	fd[0] = fd[1] = -1;
