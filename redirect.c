@@ -23,7 +23,7 @@ void redirect(REDIR_TYPE type, char *name)
 				  if (fd < 0)			 error("File Open Error");
 				  if(dup2(fd,IN) < 0)    error("Unable to redirect input");
 				  break;
-		case OUT: fd = open(name, O_WRONLY | O_CREAT, S_IRWXU);
+		case OUT: fd = open(name, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
 				  if (fd < 0)			 error("File Open Error");
 				  if(dup2(fd,OUT) < 0)   error("Unable to redirect output");
 				  break;
