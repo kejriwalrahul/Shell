@@ -306,6 +306,8 @@ int main(int argc, char **argv){
 		cmdLine = readline(prompt);		// reads input line
 		add_history (cmdLine);			// Stores it in history
 
+		if(cmdLine == NULL)				{ printf("\n"); exit(0);}
+
 		cmd = parseCommand(cmdLine);	// parses given input
 
 		// while commands exists in given ip
