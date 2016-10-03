@@ -3,6 +3,7 @@
 ### Project to build a simplistic shell
 
 Supports ';' separated commands, redirection, piping and background processes.
+
 Support for TabCompletion, Reverse-i-search, history etc. via GNU readline library.
 
 ### Dependencies:
