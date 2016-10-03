@@ -4,7 +4,10 @@
 
 Supports ';' separated commands, redirection, piping and background processes.
 
-### Bugs: 
+### Dependencies:
 
-1. TabCompletion caused problems earlier. Enabled for now. Please report if bugs found.
-2. Was Unstable. Please report problems.
+Uses GNU Readline library. 
+Can install with
+```
+sudo apt-get install libreadline6 libreadline6-dev
+```
